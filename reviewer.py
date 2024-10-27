@@ -1,7 +1,4 @@
 from sklearn.cluster import KMeans, DBSCAN
-from sklearn.metrics import silhouette_score, davies_bouldin_score
-from sklearn.preprocessing import StandardScaler
-import numpy as np
 
 
 class Reviewer:
@@ -14,7 +11,6 @@ class Reviewer:
     def __init__(self, coder_instance):
         self.coder = coder_instance
     
-
     def evaluate_accuracy(self):
         """Evaluate if clusters make sense based on an accuracy threshold (e.g., silhouette score > 0.5)"""
 
@@ -23,7 +19,7 @@ class Reviewer:
             return "Good cluster separation"
         else:
             return "Consider adjusting parameters or algorithm"
-    
+
 
     def suggest_hyperparameter_tuning(self):
         """Suggest hyperparameter changes for model improvement"""

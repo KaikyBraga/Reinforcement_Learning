@@ -1,7 +1,6 @@
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.metrics import silhouette_score, davies_bouldin_score
 from sklearn.preprocessing import StandardScaler
-import numpy as np
 
 
 class Coder:
