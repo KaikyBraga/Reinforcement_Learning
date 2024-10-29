@@ -1,22 +1,28 @@
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.metrics import silhouette_score, davies_bouldin_score
 from sklearn.preprocessing import StandardScaler
+from llm import *
 
-
-class Coder:
+class Coder(LLMAgent):
     """ 
     This class represents the Coder. Performs the main pre-processing 
     steps, choosing the clustering algorithm, adjusting the model and 
     evaluating the clusters.
     """ 
 
-    def __init__(self, data):
+    def __init__(self, data,  model="llama3.1", problem_description=""):
+        super().__init__(model)
+        self.base_prompt = ("You a are a Python developer and data-scientist. Your job is to write code to solve data-science problems. "
+                       "Be concise and mak sure to document your code.")
+        self.problem_description = problem_description
         self.data = data
         self.model = None
-        self.scaled_data = None
+        self.scaled_data = None # Remover depois
 
     
     def preprocess_data(self, scale=True):
+        # TODO: remover esse método, transitar para outra parte, já passar o dado pré-processado para o modelo
+        # informar ao LLM a informação.
         """Preprocess data by scaling it if scale=True"""
 
         if scale:
