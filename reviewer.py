@@ -1,35 +1,42 @@
 from sklearn.cluster import KMeans, DBSCAN
 
-
-class Reviewer:
+class Reviewer(LLMAgent):
     """ 
     This class represents the Reviewer. Evaluates clustering quality 
     based on evaluation metrics, suggests hyperparameter adjustments, 
     and checks computational efficiency.
     """
 
-    def __init__(self, coder_instance):
+    def __init__(self, coder_instance, model="llama3.1"):
+        super().__init__(model)  # Inicializa a classe LLMAgent
         self.coder = coder_instance
     
     def evaluate_accuracy(self):
         """Evaluate if clusters make sense based on an accuracy threshold (e.g., silhouette score > 0.5)"""
 
-        silhouette = self.coder.evaluate_clusters(metric="silhouette")
-        if silhouette > 0.5:
-            return "Good cluster separation"
+        silhouette_score, _ = self.coder.evaluate_clusters(metric="silhouette")
+        
+        # Geração de prompt para interação com o modelo
+        if silhouette_score > 0.5:
+            response = self.generate(f"The silhouette score is {silhouette_score}. The clusters are well separated.")
+            return "Good cluster separation", response
         else:
-            return "Consider adjusting parameters or algorithm"
-
+            response = self.generate(f"The silhouette score is {silhouette_score}. The clusters need adjustments.")
+            return "Consider adjusting parameters or algorithm", response
 
     def suggest_hyperparameter_tuning(self):
         """Suggest hyperparameter changes for model improvement"""
 
         if isinstance(self.coder.model, KMeans):
             # Suggest incrementing clusters
-            return {"n_clusters": self.coder.model.n_clusters + 1}  
+            new_params = {"n_clusters": self.coder.model.n_clusters + 1}
+            response = self.generate(f"Suggesting hyperparameter adjustment for KMeans: {new_params}")
+            return new_params, response  
         elif isinstance(self.coder.model, DBSCAN):
             # Suggest reducing neighborhood radius for DBSCAN
-            return {"eps": self.coder.model.eps * 0.9}  
+            new_params = {"eps": self.coder.model.eps * 0.9}
+            response = self.generate(f"Suggesting hyperparameter adjustment for DBSCAN: {new_params}")
+            return new_params, response
     
 
     def check_efficiency(self):
@@ -37,13 +44,20 @@ class Reviewer:
 
         if isinstance(self.coder.model, KMeans):
             # Analyzing the number of clusters chosen
-            return f"KMeans with {self.coder.model.n_clusters} clusters may have high computational cost if n_clusters is large."
+            message = f"KMeans with {self.coder.model.n_clusters} clusters may have high computational cost if n_clusters is large."
+            response = self.generate(message)
+            return message, response
         elif isinstance(self.coder.model, DBSCAN):
-            return f"DBSCAN with eps={self.coder.model.eps} and min_samples={self.coder.model.min_samples} requires efficient data scaling."
-
+            message = f"DBSCAN with eps={self.coder.model.eps} and min_samples={self.coder.model.min_samples} requires efficient data scaling."
+            response = self.generate(message)
+            return message, response
 
     def review_code_quality(self):
         """Ensure code quality, such as checking documentation and modularity"""
 
-        return "Code quality is acceptable" if self.coder.model else "Ensure all steps are clearly documented and modularized."
-    
+        if self.coder.model:
+            response = self.generate("Ensure that the code is modular and well documented.")
+            return "Code quality is acceptable", response
+        else:
+            response = self.generate("Ensure all steps are clearly documented and modularized.")
+            return "Ensure all steps are clearly documented and modularized.", response
