@@ -24,8 +24,18 @@ class LLMAgent:
         
         return response["message"]["content"]
     
-
 agent = LLMAgent()
-response1 = agent.generate("Escreva APENAS uma função em Pyhton que retorne o fatorial de um número inteiro.")
+response1 = agent.generate("Escreva uma função em Python para calcular o fatorial de um número inteiro. Não escreva nada além do código. Apenas forneça a função.")
 
+print("Código gerado pelo modelo:\n")
 print(response1)
+
+try:
+    # Código da resposta gerada 
+    exec(response1)  
+    
+    # Teste a função gerada
+    print("\nResultado da função de fatorial (fatorial(5)):", fatorial(5))  
+
+except Exception as e:
+    print(f"Erro ao executar o código gerado: {e}")
