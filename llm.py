@@ -10,8 +10,8 @@ class LLMAgent:
     def add_to_history(self, content):
         self.history.append(content)
 
-        # Limits history to the last 8
-        if len(self.history) > 8:
+        # Limits history to the last 10
+        if len(self.history) > 10:
             self.history.pop(0)
 
     def generate(self, prompt):
@@ -24,8 +24,9 @@ class LLMAgent:
         
         return response["message"]["content"]
     
+"""
 agent = LLMAgent()
-response1 = agent.generate("Escreva uma função em Python para calcular o fatorial de um número inteiro. Não escreva nada além do código. Apenas forneça a função.")
+response1 = agent.generate("Escreva uma função em Python (chamada fatorial()) para calcular o fatorial de um número inteiro. Não escreva nada além do código. Apenas forneça a função.")
 
 print("Código gerado pelo modelo:\n")
 print(response1)
@@ -39,3 +40,4 @@ try:
 
 except Exception as e:
     print(f"Erro ao executar o código gerado: {e}")
+"""

@@ -1,5 +1,6 @@
 import random
 from coder import *
+import numpy as np
 
 
 def calculate_reward(X, previous_labels, new_labels, lambda_k=0.1, lambda_size=0.5, t_min=5):
