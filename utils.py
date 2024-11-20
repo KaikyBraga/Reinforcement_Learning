@@ -1,5 +1,6 @@
 import random
-from coder import *
+from coder import Coder
+from sklearn.metrics import silhouette_score, davies_bouldin_score
 import numpy as np
 
 

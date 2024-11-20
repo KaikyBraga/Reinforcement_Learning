@@ -1,6 +1,6 @@
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.metrics import silhouette_score, davies_bouldin_score
-from llm import *
+from llm import LLMAgent
 import numpy as np
 
 class Coder(LLMAgent):
@@ -37,10 +37,10 @@ class Coder(LLMAgent):
 
         print(response)
 
-        if self.algorithm_choice.title() == "kmeans".title():
-            self.algorithm = KMeans()
-        elif self.algorithm_choice.upper() == "DBSCAN":
-            self.algorithm = DBSCAN()
+        if "kmeans" in self.algorithm_choice.lower():
+            self.cluster_model = KMeans()
+        elif "DBSCAN" in self.algorithm_choice.upper():
+            self.cluster_model = DBSCAN()
 
     # Action 2
     def adjust_parameters(self, **kwargs):
@@ -62,6 +62,7 @@ class Coder(LLMAgent):
         try:
             # Split the response into individual parameters
             for param in response.split(","):
+                
                 key, value = param.split("=")
                 key = key.strip()
                 value = value.strip()
@@ -77,29 +78,29 @@ class Coder(LLMAgent):
             print(f"Adjusted parameters: {params}")
 
             # Apply the parameters to the model
-            self.algorithm.set_params(**params)
+            self.cluster_model.set_params(**params)
+            
         except Exception as e:
             print(f"Error adjusting parameters: {e}")
             
     
     def fit_model(self):
         """Fit the clustering model to the preprocessed data"""
-
-        if self.model and self.data is not None:
-            self.model.fit(self.data)
+        if self.cluster_model and self.data is not None:
+            self.cluster_model.fit(self.data)
         else:
             raise ValueError("Model or data not initialized.")
         
         # Add the message to history about model fitting
         self.add_to_history({"role": "assistant", "content": "Clustering model has been fitted."})
         
-        return self.model  
+        return self.cluster_model  
 
 
     def get_labels(self):
         """Get labels of the fitted model"""
-        if hasattr(self.model, "labels_"):
-            return self.model.labels_
+        if hasattr(self.cluster_model, "labels_"):
+            return self.cluster_model.labels_
         else:
             raise ValueError("Model has not been fitted yet.")
     
@@ -132,3 +133,6 @@ coder.choose_algorithm(previous_algorithm="kmeans", algorithm="kmeans", n_cluste
 # Adjust the parameters 
 coder.adjust_parameters(n_clusters=5)
 
+coder.fit_model()
+
+print(coder.evaluate_clusters())
