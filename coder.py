@@ -37,6 +37,10 @@ class Coder(LLMAgent):
 
         print(response)
 
+        if self.algorithm_choice.title() == "kmeans".title():
+            self.algorithm = KMeans()
+        elif self.algorithm_choice.upper() == "DBSCAN":
+            self.algorithm = DBSCAN()
 
     # Action 2
     def adjust_parameters(self, **kwargs):
@@ -73,7 +77,7 @@ class Coder(LLMAgent):
             print(f"Adjusted parameters: {params}")
 
             # Apply the parameters to the model
-            self.model.set_params(**params)
+            self.algorithm.set_params(**params)
         except Exception as e:
             print(f"Error adjusting parameters: {e}")
             
