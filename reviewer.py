@@ -25,23 +25,6 @@ class Reviewer(LLMAgent):
             response = self.generate(f"The silhouette score is {silhouette_score}. The clusters need adjustments.")
             return "Consider adjusting parameters or algorithm", response
 
-    def suggest_hyperparameter_tuning(self):
-        """Suggest hyperparameter changes for model improvement"""
-
-        if isinstance(self.coder.cluster_model, KMeans):
-            # Suggest incrementing clusters
-            new_params = {"n_clusters": self.coder.cluster_model.n_clusters + 1}
-            response = self.generate(f"Suggesting hyperparameter adjustment for KMeans: {new_params}")
-
-            return new_params, response  
-        
-        elif isinstance(self.coder.cluster_model, DBSCAN):
-            # Suggest reducing neighborhood radius for DBSCAN
-            new_params = {"eps": self.coder.cluster_model.eps * 0.9}
-            response = self.generate(f"Suggesting hyperparameter adjustment for DBSCAN: {new_params}")
-
-            return new_params, response
-    
 
     def check_efficiency(self):
         """Analyze model efficiency and complexity"""
@@ -59,12 +42,31 @@ class Reviewer(LLMAgent):
 
             return message, response
 
-    def review_code_quality(self):
-        """Ensure code quality, such as checking documentation and modularity"""
 
-        if self.coder.cluster_model:
-            response = self.generate("Ensure that the code is modular and well documented.")
-            return "Code quality is acceptable", response
-        else:
-            response = self.generate("Ensure all steps are clearly documented and modularized.")
-            return "Ensure all steps are clearly documented and modularized.", response
+    # def suggest_hyperparameter_tuning(self):
+    #     """Suggest hyperparameter changes for model improvement"""
+
+    #     if isinstance(self.coder.cluster_model, KMeans):
+    #         # Suggest incrementing clusters
+    #         new_params = {"n_clusters": self.coder.cluster_model.n_clusters + 1}
+    #         response = self.generate(f"Suggesting hyperparameter adjustment for KMeans: {new_params}")
+
+    #         return new_params, response  
+        
+    #     elif isinstance(self.coder.cluster_model, DBSCAN):
+    #         # Suggest reducing neighborhood radius for DBSCAN
+    #         new_params = {"eps": self.coder.cluster_model.eps * 0.9}
+    #         response = self.generate(f"Suggesting hyperparameter adjustment for DBSCAN: {new_params}")
+
+    #         return new_params, response
+    
+
+    # def review_code_quality(self):
+    #     """Ensure code quality, such as checking documentation and modularity"""
+
+    #     if self.coder.cluster_model:
+    #         response = self.generate("Ensure that the code is modular and well documented.")
+    #         return "Code quality is acceptable", response
+    #     else:
+    #         response = self.generate("Ensure all steps are clearly documented and modularized.")
+    #         return "Ensure all steps are clearly documented and modularized.", response

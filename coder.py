@@ -47,7 +47,7 @@ class Coder(LLMAgent):
         """Adjust the parameters for the selected clustering algorithm"""
 
         # Generate a prompt for the LLM about the choice of algorithm
-        prompt = f"Given the selected clustering algorithm ({self.algorithm_choice}), return only the kwargs parameters as a string in the format 'param1=value1, param2=value2, ...'. The current kwargs to adjust are: {kwargs}."
+        prompt = f"Given the selected clustering algorithm ({self.algorithm_choice}), return only the kwargs parameters as a string in the format 'param1=value1, param2=value2, ...'. Adjust these kwargs: {kwargs}."
 
         self.add_to_history({"role": "user", "content": prompt})
 
@@ -131,7 +131,7 @@ coder = Coder(data=data)
 coder.choose_algorithm(previous_algorithm="kmeans", algorithm="kmeans", n_clusters=3)
 
 # Adjust the parameters 
-coder.adjust_parameters(n_clusters=5)
+coder.adjust_parameters(n_clusters=3)
 
 coder.fit_model()
 
