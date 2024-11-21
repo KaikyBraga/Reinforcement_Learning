@@ -12,8 +12,8 @@ class Coder(LLMAgent):
 
     def __init__(self, data, evaluation_results_initial, model="llama3.1"):
         super().__init__(model)
-        self.base_prompt = "You are a data scientist specialized in machine learning. Your task is to solve clustering problem. Return only the requested requirement, without additional explanations. Focus solely on the specifications provided in the prompt."
-        self.history = [{"role": "user", "content": self.base_prompt}]
+        base_prompt = "You are a data scientist specialized in machine learning. Your task is to solve clustering problem. Return only the requested requirement, without additional explanations. Focus solely on the specifications provided in the prompt."
+        self.history = [{"role": "user", "content": base_prompt}]
         self.data = data
         self.cluster_model = KMeans()
         self.algorithm_choice = "kmeans"  
