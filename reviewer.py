@@ -9,22 +9,21 @@ class Reviewer(LLMAgent):
     """
 
     def __init__(self, coder_instance, model="llama3.1"):
-        super().__init__(model)  # Inicializa a classe LLMAgent
+        super().__init__(model)  
         self.coder = coder_instance
     
     def evaluate_accuracy(self):
         """Evaluate if clusters make sense based on an accuracy threshold (e.g., silhouette score > 0.5)"""
-
+        
         silhouette_score, _ = self.coder.evaluate_clusters(metric="silhouette")
         
-        # Geração de prompt para interação com o modelo
         if silhouette_score > 0.5:
             response = self.generate(f"The silhouette score is {silhouette_score}. The clusters are well separated.")
             return "Good cluster separation", response
         else:
             response = self.generate(f"The silhouette score is {silhouette_score}. The clusters need adjustments.")
             return "Consider adjusting parameters or algorithm", response
-
+        
 
     def check_efficiency(self):
         """Analyze model efficiency and complexity"""
