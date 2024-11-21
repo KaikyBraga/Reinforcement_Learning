@@ -50,7 +50,7 @@ def calculate_reward(X, previous_labels, new_labels, lambda_k=0.1, lambda_size=0
     return reward
 
 
-def epsilon_greedy_decay(actions, q_values, epsilon, epsilon_min, decay_rate, step):
+def epsilon_greedy_decay(actions, q_values, epsilon, epsilon_min, decay_rate):
     """
     Epsilon-greedy action selection with decay.
     
@@ -94,8 +94,6 @@ def update_q_value(q_values, action, reward, alpha=0.1):
         None
     """
     q_values[action] = q_values[action] + alpha * (reward - q_values[action])
-
-
 
 random.seed(42)  
 

@@ -1,6 +1,5 @@
 import ollama
 
-
 class LLMAgent:
     def __init__(self, model="llama3.1"):
         self.model = model

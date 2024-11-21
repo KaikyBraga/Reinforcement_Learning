@@ -112,7 +112,7 @@ class Coder(LLMAgent):
         response = self.generate(prompt)
         self.add_to_history({"role": "assistant", "content": response})
 
-        print("RESPOSTA: ", response)
+        print(response)
 
         try:
             if response[0] == "'":
