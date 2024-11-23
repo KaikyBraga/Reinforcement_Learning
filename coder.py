@@ -12,11 +12,12 @@ class Coder(LLMAgent):
     evaluating the clusters.
     """ 
 
-    def __init__(self, data, evaluation_results_initial, model="llama3.1"):
+    def __init__(self, df, data, evaluation_results_initial, model="llama3.1"):
         super().__init__(model)
         base_prompt = "You are a data scientist specialized in machine learning. Your task is to solve clustering problem. Return only the requested requirement, without additional explanations. Focus solely on the specifications provided in the prompt."
         self.history = [{"role": "user", "content": base_prompt}]
-        self.data = data
+        self.df = df # Pandas DataFrame
+        self.data = data # Array of df
         self.cluster_model = KMeans()
         self.algorithm_choice = "kmeans"  
         self.evaluation_results = evaluation_results_initial
@@ -143,6 +144,56 @@ class Coder(LLMAgent):
             self.parameters_error_flag = True  # Mark as error
 
 
+    # Action 3
+    def remove_outliers(self):
+    
+        columns = self.df.columns
+
+        prompt = f"""
+        You are evaluating a clustering task with the following metrics:
+        - Silhouette Score: {self.evaluation_results['silhouette_score']}
+        - Davies-Bouldin Index: {self.evaluation_results['davies_bouldin_score']}
+
+        Suggest a percentage of the data that should remain after removing outliers. 
+        This percentage should optimize the clustering metrics, ensuring a balance between compact clusters 
+        (improving the Silhouette score) and minimizing overlap (reducing the Davies-Bouldin Index). 
+        The percentage should represent the data that stays after outlier removal.
+
+        RETURN A SINGLE NUMBER (percentage) BETWEEN 0 AND 1.
+        """
+
+        self.llm_error_flag = False  # Reset flag
+
+        response = self.generate(prompt)
+
+        print(response)
+    
+        try:
+            pct = float(response)
+            if not (0 < pct < 1):
+                self.llm_error_flag = True
+                return
+            
+        except Exception as e:
+            self.llm_error_flag = False
+
+        # Quantiles limits 
+        q1 = (1 - pct) / 2
+        q2 = pct + q1
+
+        mask = pd.Series([True] * len(self.df))  
+        
+        for col in columns:
+            Q1 = self.df[col].quantile(q1)  
+            Q2 = self.df[col].quantile(q2)  
+
+            # Atualization of the mask
+            mask &= (self.df[col] >= Q1) & (self.df[col] <= Q2)
+
+        self.df = self.df[mask].reset_index(drop=True)
+        self.data = self.data[mask.values]
+
+
     def fit_model(self):
         """Fit the clustering model to the preprocessed data."""
 
@@ -208,3 +259,37 @@ class Coder(LLMAgent):
         
     def normalize_data(self):
         self.scaler.fit_transform(self.data)
+
+# TESTE
+
+np.random.seed(42)
+data = np.random.randn(200, 5)  
+df = pd.DataFrame(data, columns=[f"feature_{i}" for i in range(5)])
+
+
+initial_metrics = {
+    "silhouette_score": 0.3,  
+    "davies_bouldin_score": 2.0,  
+    "n_clusters": 3
+}
+
+coder = Coder(df=df, data=data, evaluation_results_initial=initial_metrics)
+
+
+# escolha do algoritmo
+print("\nTestando escolha do algoritmo...")
+coder.choose_algorithm()
+print(f"Algoritmo escolhido: {coder.algorithm_choice}")
+
+# ajuste de parâmetros
+print("\nTestando ajuste de parâmetros...")
+coder.adjust_parameters()
+print(f"Parâmetros ajustados para {coder.algorithm_choice}: {coder.cluster_model.get_params()}")
+
+# remoção de outliers
+print("\nTestando remoção de outliers...")
+print(f"Antes da remoção: {len(coder.df)} amostras")
+coder.remove_outliers()
+print(f"Depois da remoção: {len(coder.df)} amostras")
+
+print(coder.evaluation_results)
