@@ -95,37 +95,39 @@ def update_q_value(q_values, action, reward, alpha=0.1):
     """
     q_values[action] = q_values[action] + alpha * (reward - q_values[action])
 
-random.seed(42)  
 
-# Lista de ações possíveis
-actions = ["A", "B", "C"]
+if __name__ == "__main__":
+    random.seed(42)  
 
-# Inicialização dos Q-valores (arbitrários)
-q_values = {action: 0.0 for action in actions}
+    # Lista de ações possíveis
+    actions = ["A", "B", "C"]
 
-# Parâmetros do epsilon-greedy
-epsilon = 1.0  # Alta exploração inicial
-epsilon_min = 0.1
-decay_rate = 0.9
-steps = 30  # Número de iterações para o teste
+    # Inicialização dos Q-valores (arbitrários)
+    q_values = {action: 0.0 for action in actions}
 
-# Teste do algoritmo epsilon-greedy com decaimento
-print("Teste Epsilon-Greedy Decay e Atualização de Q-Valores\n")
-print("Passo | Epsilon  | Ação Selecionada | Q-Valores")
+    # Parâmetros do epsilon-greedy
+    epsilon = 1.0  # Alta exploração inicial
+    epsilon_min = 0.1
+    decay_rate = 0.9
+    steps = 30  # Número de iterações para o teste
 
-for step in range(1, steps + 1):
-    # Selecionar ação usando a política epsilon-greedy
-    action, epsilon = epsilon_greedy_decay(actions, q_values, epsilon, epsilon_min, decay_rate)
-    
-    # Gerar recompensa fictícia (exemplo: +10 para a ação "A", +5 para "B", +2 para "C")
-    rewards = {"A": 10, "B": 5, "C": 2}
-    reward = rewards[action]
-    
-    # Atualizar o Q-valor da ação selecionada
-    update_q_value(q_values, action, reward, alpha=0.1)
-    
-    # Mostrar os resultados do passo atual
-    print(f"{step:5d} | {epsilon:.4f} | {action:^15} | {q_values}")
+    # Teste do algoritmo epsilon-greedy com decaimento
+    print("Teste Epsilon-Greedy Decay e Atualização de Q-Valores\n")
+    print("Passo | Epsilon  | Ação Selecionada | Q-Valores")
 
-# Finalizando o teste
-print("\nTeste concluído.")
+    for step in range(1, steps + 1):
+        # Selecionar ação usando a política epsilon-greedy
+        action, epsilon = epsilon_greedy_decay(actions, q_values, epsilon, epsilon_min, decay_rate)
+        
+        # Gerar recompensa fictícia (exemplo: +10 para a ação "A", +5 para "B", +2 para "C")
+        rewards = {"A": 10, "B": 5, "C": 2}
+        reward = rewards[action]
+        
+        # Atualizar o Q-valor da ação selecionada
+        update_q_value(q_values, action, reward, alpha=0.1)
+        
+        # Mostrar os resultados do passo atual
+        print(f"{step:5d} | {epsilon:.4f} | {action:^15} | {q_values}")
+
+    # Finalizando o teste
+    print("\nTeste concluído.")

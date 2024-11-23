@@ -186,10 +186,11 @@ class Coder(LLMAgent):
             "n_clusters": n_clusters}
         
     def choose_norm(self):
-        prompt = f"""Para poder fazer uma boa clusterização, é necessário que os dados estejam normalizados.
-                  Seu dever é escolher o método que melhor se encaixe para normalizar o seguinte array de dados: {self.data}. 
-                  Escolha entre os seguintes métodos: MaxAbsScaler, MinMaxScaler, StandardScaler, RobustScaler, Normalizer.
-                  RESPONDA APENAS COM O NOME DO MÉTODO COMO LHE FOI PASSADO!"""
+        prompt = f"""To perform good clustering, it is necessary for the data to be normalized.
+                  Your task is to choose the method that best fits to normalize the following data array: {self.data}.
+                  Choose from the following methods: MaxAbsScaler, MinMaxScaler, StandardScaler, RobustScaler, Normalizer.
+                  RESPOND ONLY WITH THE NAME OF THE METHOD AS IT WAS GIVEN TO YOU!
+                  """
 
         
         self.add_to_history({"role": "user", "content": prompt})
