@@ -12,11 +12,11 @@ class Coder(LLMAgent):
     evaluating the clusters.
     """ 
 
-    def __init__(self, df, data, evaluation_results_initial, model="llama3.1"):
+    def __init__(self, data, evaluation_results_initial, model="llama3.1"):
         super().__init__(model)
         base_prompt = "You are a data scientist specialized in machine learning. Your task is to solve clustering problem. Return only the requested requirement, without additional explanations. Focus solely on the specifications provided in the prompt."
         self.history = [{"role": "user", "content": base_prompt}]
-        self.df = df # Pandas DataFrame
+        self.df = pd.DataFrame(data, columns=[f"feature_{i}" for i in range(data.shape[1])]) # Pandas DataFrame
         self.data = data # Array of df
         self.cluster_model = KMeans()
         self.algorithm_choice = "kmeans"  
@@ -237,8 +237,10 @@ class Coder(LLMAgent):
             "n_clusters": n_clusters}
         
     def choose_norm(self):
+        array_data = np.array(self.data)
+
         prompt = f"""To perform good clustering, it is necessary for the data to be normalized.
-                  Your task is to choose the method that best fits to normalize the following data array: {self.data}.
+                  Your task is to choose the method that best fits to normalize the following data array: {array_data}.
                   Choose from the following methods: MaxAbsScaler, MinMaxScaler, StandardScaler, RobustScaler, Normalizer.
                   RESPOND ONLY WITH THE NAME OF THE METHOD AS IT WAS GIVEN TO YOU!
                   """
@@ -246,12 +248,13 @@ class Coder(LLMAgent):
         
         self.add_to_history({"role": "user", "content": prompt})
         response = self.generate(prompt)
+        print(response)
         self.add_to_history({"role": "assistant", "content": response})
 
         norm_names = ["MaxAbsScaler", "MinMaxScaler", "StandardScaler", "RobustScaler", "Normalizer"]
         list_norms = [MaxAbsScaler(), MinMaxScaler(), StandardScaler(), RobustScaler(), Normalizer()]
         for i in range(len(list_norms)):
-            if norm_names[i] in response.lower():
+            if norm_names[i] in response:
                 self.scaler = list_norms[i]
                 return
         else:
@@ -259,37 +262,3 @@ class Coder(LLMAgent):
         
     def normalize_data(self):
         self.scaler.fit_transform(self.data)
-
-# TESTE
-
-np.random.seed(42)
-data = np.random.randn(200, 5)  
-df = pd.DataFrame(data, columns=[f"feature_{i}" for i in range(5)])
-
-
-initial_metrics = {
-    "silhouette_score": 0.3,  
-    "davies_bouldin_score": 2.0,  
-    "n_clusters": 3
-}
-
-coder = Coder(df=df, data=data, evaluation_results_initial=initial_metrics)
-
-
-# escolha do algoritmo
-print("\nTestando escolha do algoritmo...")
-coder.choose_algorithm()
-print(f"Algoritmo escolhido: {coder.algorithm_choice}")
-
-# ajuste de parâmetros
-print("\nTestando ajuste de parâmetros...")
-coder.adjust_parameters()
-print(f"Parâmetros ajustados para {coder.algorithm_choice}: {coder.cluster_model.get_params()}")
-
-# remoção de outliers
-print("\nTestando remoção de outliers...")
-print(f"Antes da remoção: {len(coder.df)} amostras")
-coder.remove_outliers()
-print(f"Depois da remoção: {len(coder.df)} amostras")
-
-print(coder.evaluation_results)
