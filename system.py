@@ -1,4 +1,4 @@
-from utils import *
+from utils import calculate_reward, epsilon_greedy_decay, update_q_value  
 import matplotlib.pyplot as plt
 
 class System:

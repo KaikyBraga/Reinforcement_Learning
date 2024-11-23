@@ -1,7 +1,9 @@
-from sklearn.cluster import KMeans, DBSCAN
+from sklearn.cluster import KMeans, DBSCAN, 
 from sklearn.metrics import silhouette_score, davies_bouldin_score
+from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler, StandardScaler, RobustScaler, Normalizer
 from llm import LLMAgent
 import numpy as np
+import pandas as pd
 
 class Coder(LLMAgent):
     """ 
@@ -182,6 +184,29 @@ class Coder(LLMAgent):
             "silhouette_score": silhouette_score(self.data, labels),
             "davies_bouldin_score": davies_bouldin_score(self.data, labels),
             "n_clusters": n_clusters}
+        
+    def choose_norm(self, data):
+        prompt = f"""Para poder fazer uma boa clusterização, é necessário que os dados estejam normalizados.
+                  Seu dever é escolher o método que melhor se encaixe para normalizar o seguinte array de dados: {data}. 
+                  Escolha entre os seguintes métodos: MaxAbsScaler, MinMaxScaler, StandardScaler, RobustScaler, Normalizer.
+                  RESPONDA APENAS COM O NOME DO MÉTODO COMO LHE FOI PASSADO!"""
+
+        
+        self.add_to_history({"role": "user", "content": prompt})
+        response = self.generate(prompt)
+        self.add_to_history({"role": "assistant", "content": response})
+
+        norm_names = ["MaxAbsScaler", "MinMaxScaler", "StandardScaler", "RobustScaler", "Normalizer"]
+        list_norms = [MaxAbsScaler(), MinMaxScaler(), StandardScaler(), RobustScaler(), Normalizer()]
+        for i in range(list_norms):
+            if norm_names[i] in response.lower():
+                self.scaler = list_norms[i]
+                return
+        else:
+            raise ValueError(f"Unsupported norm: {self.scaler}")
+        
+    def normalize_data(self, data):
+        self.scaler.fit_transform(data)
 
 
 # Create some random data
