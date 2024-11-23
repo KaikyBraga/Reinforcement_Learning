@@ -115,7 +115,7 @@ print("Passo | Epsilon  | Ação Selecionada | Q-Valores")
 
 for step in range(1, steps + 1):
     # Selecionar ação usando a política epsilon-greedy
-    action, epsilon = epsilon_greedy_decay(actions, q_values, epsilon, epsilon_min, decay_rate, step)
+    action, epsilon = epsilon_greedy_decay(actions, q_values, epsilon, epsilon_min, decay_rate)
     
     # Gerar recompensa fictícia (exemplo: +10 para a ação "A", +5 para "B", +2 para "C")
     rewards = {"A": 10, "B": 5, "C": 2}
