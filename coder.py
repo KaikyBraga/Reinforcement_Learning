@@ -18,6 +18,7 @@ class Coder(LLMAgent):
         self.history = [{"role": "user", "content": base_prompt}]
         self.df = pd.DataFrame(data, columns=[f"feature_{i}" for i in range(data.shape[1])]) # Pandas DataFrame
         self.data = data # Array of df
+        self.__backup_data = data
         self.cluster_model = KMeans()
         self.algorithm_choice = "kmeans"  
         self.evaluation_results = evaluation_results_initial
@@ -174,7 +175,7 @@ class Coder(LLMAgent):
                 self.llm_error_flag = True
                 return
             
-        except Exception as e:
+        except Exception:
             self.llm_error_flag = False
 
         # Quantiles limits 
@@ -261,4 +262,7 @@ class Coder(LLMAgent):
             raise ValueError(f"Unsupported norm: {self.scaler}")
         
     def normalize_data(self):
-        self.scaler.fit_transform(self.data)
+        self.data = self.scaler.fit_transform(self.data)
+
+    def reset_data(self):
+        self.data = self.__backup_data
