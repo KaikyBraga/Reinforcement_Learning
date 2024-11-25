@@ -4,6 +4,8 @@ from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler, StandardScaler, Ro
 from llm import LLMAgent
 import numpy as np
 import pandas as pd
+import json
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 class Coder(LLMAgent):
     """ 
@@ -12,13 +14,14 @@ class Coder(LLMAgent):
     evaluating the clusters.
     """ 
 
-    def __init__(self, data, evaluation_results_initial, model="llama3.1"):
+    def __init__(self, data, df, evaluation_results_initial, model="llama3.1"):
         super().__init__(model)
         base_prompt = "You are a data scientist specialized in machine learning. Your task is to solve clustering problem. Return only the requested requirement, without additional explanations. Focus solely on the specifications provided in the prompt."
         self.history = [{"role": "user", "content": base_prompt}]
-        self.df = pd.DataFrame(data, columns=[f"feature_{i}" for i in range(data.shape[1])]) # Pandas DataFrame
+        self.df = df # Pandas DataFrame
         self.data = data # Array of df
         self.__backup_data = data
+        self.__backup_df = df
         self.cluster_model = KMeans()
         self.algorithm_choice = "kmeans"  
         self.evaluation_results = evaluation_results_initial
@@ -27,9 +30,10 @@ class Coder(LLMAgent):
         self.llm_error_flag = False # Flag to track LLM's delirium
         self.parameters_error_flag = False # Flag to track invallid parameters
 
+
     # Action 1
     def choose_algorithm(self):
-        """Select clustering algorithm: kmeans or dbscan, based on provided metrics."""
+        """Select clustering algorithm, based on provided metrics."""
 
         # Reset flags
         self.llm_error_flag = False  
@@ -50,7 +54,7 @@ class Coder(LLMAgent):
         response = self.generate(prompt)
         self.add_to_history({"role": "assistant", "content": response})
 
-        print(response)
+        print("Response:", response)
 
         try:
             if "kmeans" in response.lower():
@@ -79,6 +83,7 @@ class Coder(LLMAgent):
 
         if self.evaluation_results["silhouette_score"] == None:
             self.parameters_error_flag = True  # Mark as error
+
 
     # Action 2
     def adjust_parameters(self):
@@ -116,7 +121,7 @@ class Coder(LLMAgent):
         response = self.generate(prompt)
         self.add_to_history({"role": "assistant", "content": response})
 
-        print(response)
+        print("Response:", response)
 
         try:
             if response[0] == "'":
@@ -147,15 +152,20 @@ class Coder(LLMAgent):
 
     # Action 3
     def remove_outliers(self):
-    
-        columns = self.df.columns
+        """Remove outliers from the dataset."""
+
+        # Reset flag
+        self.llm_error_flag = False  
+        self.parameters_error_flag = False  
+
+        columns = self.__backup_df.columns
 
         prompt = f"""
         You are evaluating a clustering task with the following metrics:
         - Silhouette Score: {self.evaluation_results['silhouette_score']}
         - Davies-Bouldin Index: {self.evaluation_results['davies_bouldin_score']}
 
-        Suggest a percentage of the data that should remain after removing outliers. 
+        Suggest a large percentage of the data that should remain after removing outliers. 
         This percentage should optimize the clustering metrics, ensuring a balance between compact clusters 
         (improving the Silhouette score) and minimizing overlap (reducing the Davies-Bouldin Index). 
         The percentage should represent the data that stays after outlier removal.
@@ -167,7 +177,7 @@ class Coder(LLMAgent):
 
         response = self.generate(prompt)
 
-        print(response)
+        print("Response:", response)
     
         try:
             pct = float(response)
@@ -176,23 +186,125 @@ class Coder(LLMAgent):
                 return
             
         except Exception:
-            self.llm_error_flag = False
+            pass
 
         # Quantiles limits 
         q1 = (1 - pct) / 2
         q2 = pct + q1
 
-        mask = pd.Series([True] * len(self.df))  
-        
-        for col in columns:
-            Q1 = self.df[col].quantile(q1)  
-            Q2 = self.df[col].quantile(q2)  
+        mask = pd.Series([True] * len(self.data))  
 
-            # Atualization of the mask
-            mask &= (self.df[col] >= Q1) & (self.df[col] <= Q2)
+        for i, col in enumerate(columns):
+            if self.df[col].dtype in ["float64", "float32", "int64", "int32"]:  
+                Q1 = np.quantile(self.data[:, i], q1)  
+                Q2 = np.quantile(self.data[:, i], q2)  
 
-        self.df = self.df[mask].reset_index(drop=True)
+                # Atualization of the mask
+                mask &= (self.data[:, i] >= Q1) & (self.data[:, i] <= Q2)
+
         self.data = self.data[mask.values]
+        self.df = self.df[mask].reset_index(drop=True)
+
+        self.evaluate_clusters()
+
+
+    def choose_norm(self):
+        """Choose the normalization method based on the data type of the columns."""
+
+        # Reset flag
+        self.llm_error_flag = False  
+        self.parameters_error_flag = False  
+
+        column_types = {
+            "categorical": [col for col in self.__backup_df.columns if self.__backup_df[col].dtype == "object"],
+            "integer": [col for col in self.__backup_df.columns if self.__backup_df[col].dtype in ["int64", "int32"]],
+            "boolean": [col for col in self.__backup_df.columns if self.__backup_df[col].dtype == "bool"],
+            "float": [col for col in self.__backup_df.columns if self.__backup_df[col].dtype in ["float64", "float32"]]
+        }
+
+        prompt = f"""You need to normalize the following DataFrame: 
+        {self.df}.
+        The columns are grouped by type as follows:
+        - Categorical: {column_types['categorical']}
+        - Integer: {column_types['integer']}
+        - Boolean: {column_types['boolean']}
+        - Float: {column_types['float']}
+        = Choose a normalization method for each type of data.
+        = The options are:
+        - Categorical: None, OneHotEncoding, LabelEncoding
+        - Integer: StandardScaler, MinMaxScaler, MaxAbsScaler, RobustScaler
+        - Boolean: None, BinaryScaler (scales to 0 and 1)
+        - Float: StandardScaler, MinMaxScaler, MaxAbsScaler, RobustScaler
+        Return ONLY the answer in the following JSON format:
+        {{
+        "categorical": "None",
+        "integer": "StandardScaler",
+        "boolean": "BinaryScaler",
+        "float": "MinMaxScaler"
+        }}
+        """
+
+        self.add_to_history({"role": "user", "content": prompt})
+        response = self.generate(prompt)
+        self.add_to_history({"role": "assistant", "content": response})
+
+        print("Response:", response)
+
+        norm_map = {
+            "StandardScaler": StandardScaler(),
+            "MinMaxScaler": MinMaxScaler(),
+            "MaxAbsScaler": MaxAbsScaler(),
+            "RobustScaler": RobustScaler(),
+            "BinaryScaler": MinMaxScaler(feature_range=(0, 1)),  
+            "OneHotEncoding": None,  
+            "LabelEncoding": None,  
+            "None": None  
+        }
+
+        try:
+            # Interpret the response as a dictionary
+            chosen_norms = eval(response)
+            if not isinstance(chosen_norms, dict):
+                raise ValueError("Invalid response format. Expected a dictionary.")
+
+            temp_df = self.df.copy()
+
+            # Normalization for each column 
+            for dtype, norm_name in chosen_norms.items():
+                if dtype not in column_types or norm_name not in norm_map:
+                    raise ValueError(f"Invalid normalization type or method: {dtype}, {norm_name}")
+
+                scaler = norm_map[norm_name]
+                for col in column_types[dtype]:
+                    if scaler is not None:
+                        temp_df[col] = scaler.fit_transform(temp_df[[col]])
+                    elif norm_name == "OneHotEncoding":
+                        temp_df = pd.get_dummies(temp_df, columns=[col])
+                    elif norm_name == "LabelEncoding":
+                        le = LabelEncoder()
+                        temp_df[col] = le.fit_transform(temp_df[col])
+
+            self.df = temp_df
+            self.data = self.df.values
+
+            self.evaluate_clusters()
+
+        except Exception as e:
+            self.llm_error_flag = True  # Mark as error
+
+
+    # Action 5
+    def reset_data(self):
+        """Reset the data to the original state."""
+
+        # Reset flags
+        self.llm_error_flag = False  
+        self.parameters_error_flag = False  
+
+        self.data = self.__backup_data
+        self.df = self.__backup_df    
+
+        self.evaluate_clusters     
 
 
     def fit_model(self):
@@ -237,32 +349,3 @@ class Coder(LLMAgent):
             "davies_bouldin_score": davies_bouldin_score(self.data, labels),
             "n_clusters": n_clusters}
         
-    def choose_norm(self):
-        array_data = np.array(self.data)
-
-        prompt = f"""To perform good clustering, it is necessary for the data to be normalized.
-                  Your task is to choose the method that best fits to normalize the following data array: {array_data}.
-                  Choose from the following methods: MaxAbsScaler, MinMaxScaler, StandardScaler, RobustScaler, Normalizer.
-                  RESPOND ONLY WITH THE NAME OF THE METHOD AS IT WAS GIVEN TO YOU!
-                  """
-
-        
-        self.add_to_history({"role": "user", "content": prompt})
-        response = self.generate(prompt)
-        print(response)
-        self.add_to_history({"role": "assistant", "content": response})
-
-        norm_names = ["MaxAbsScaler", "MinMaxScaler", "StandardScaler", "RobustScaler", "Normalizer"]
-        list_norms = [MaxAbsScaler(), MinMaxScaler(), StandardScaler(), RobustScaler(), Normalizer()]
-        for i in range(len(list_norms)):
-            if norm_names[i] in response:
-                self.scaler = list_norms[i]
-                return
-        else:
-            raise ValueError(f"Unsupported norm: {self.scaler}")
-        
-    def normalize_data(self):
-        self.data = self.scaler.fit_transform(self.data)
-
-    def reset_data(self):
-        self.data = self.__backup_data

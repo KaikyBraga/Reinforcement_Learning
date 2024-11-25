@@ -5,30 +5,42 @@ class System:
     def __init__(self, coder, reviewer):
         self.coder = coder
         self.reviewer = reviewer
-        self.q_values_coder = {"Change": 0, "Fix": 0}  
-        self.actions = ["Change", "Fix"]
+        self.actions = ["Change_Model", "Fix_Parameters", "Remove_Outliers", "Normalize_Data", "Reset_Data"]
+        self.q_values_coder = {action: 0 for action in self.actions}
         self.labels = None
         self.results = []
         self.results_flag = []
 
 
-    def train(self, epochs, epsilon, epsilon_min, decay_rate, size_penalty, lambda_k, lambda_size, X):
+    def train(self, epochs, epsilon, epsilon_min, decay_rate, size_penalty, lambda_k, lambda_size):
+        self.coder.fit_model()
         previous_labels = self.coder.get_labels()
         previous_silhouette = self.coder.evaluation_results["silhouette_score"]
         previous_davies_bouldin = self.coder.evaluation_results["davies_bouldin_score"]
 
+
         for epoch in range(epochs):
+
             # epsilon greedy
-            action, epsilon = self.epsilon_greedy_decay(self.actions, self.q_values_coder, epsilon, epsilon_min, decay_rate)
+            action, epsilon = epsilon_greedy_decay(self.actions, self.q_values_coder, epsilon, epsilon_min, decay_rate)
 
-            if action == "Change":
+            print("\nEpoch", epoch)
+            print("Action:", action)
+
+            # Select action
+            if action == "Change_Model":
                 self.coder.choose_algorithm()
-            else:
+            elif action == "Fix_Parameters":
                 self.coder.adjust_parameters()
-
+            elif action == "Remove_Outliers":
+                self.coder.remove_outliers()
+            elif action == "Normalize_Data":
+                self.coder.choose_norm()
+            elif action == "Reset_Data":
+                self.coder.reset_data()
             new_labels = self.coder.get_labels()
 
-            reward = calculate_reward(X, previous_labels, new_labels, lambda_k, lambda_size, t_min=5)
+            reward = calculate_reward(self.coder.data, previous_labels, new_labels, lambda_k, lambda_size, t_min=5)
 
             new_silhouette = self.coder.evaluation_results["silhouette_score"]
             new_davies_bouldin = self.coder.evaluation_results["davies_bouldin_score"]
@@ -47,7 +59,13 @@ class System:
             self.results.append([self.coder.evaluation_results, reward, action])
             self.results_flag.append((self.coder.llm_error_flag, self.coder.parameters_error_flag))
 
+            print("Reward: ", reward)
+            print("-------------------------\n")
+
         self.labels = self.coder.get_labels()
+
+        print("Training completed.")
+
         return self.results, self.results_flag
 
 
@@ -142,93 +160,3 @@ class System:
         self.plot_error_flags()
         self.plot_average_reward_per_action()
         self.plot_reward_distribution()
-
-# class Environment:
-
-#     def __init__(self, coder, reviewer):
-#         self.coder = coder
-#         self.reviewer = reviewer
-#         self.state = {}
-#         self.algorithms = ["kmeans", "dbscan"]
-
-       
-#     def execute(self):
-#         self.coder.preprocess_data()
-        
-#         self.coder.choose_algorithm(algorithm=random.choice(self.algorithms), n_clusters=2) 
-#         self.coder.fit_model()
-        
-#         self.state["labels"] = self.coder.get_labels()
-       
-
-#     def evaluate(self):
-#         accuracy_eval = self.reviewer.evaluate_accuracy()
-#         efficiency_eval = self.reviewer.check_efficiency()
-#         return {"accuracy": accuracy_eval, "efficiency": efficiency_eval}
-
-    
-
-# class RewardSystem:
-#     # TODO: Melhorar o sistema de recompensas.
-
-#     def __init__(self):
-#         self.reward = 0
-    
-
-#     def calculate_reward(self, evaluations):
-#         if evaluations["accuracy"] == "Good cluster separation":
-#             self.reward += 5
-#         else:
-#             self.reward -= 5
-        
-#         if "high computational cost" in evaluations["efficiency"]:
-#             self.reward -= 2
-#         else:
-#             self.reward += 2
-        
-#         return self.reward
-    
-
-# class Trainer:
-#     def __init__(self, coder, reviewer, environment, reward_system, epochs=100):
-#         self.coder = coder
-#         self.reviewer = reviewer
-#         self.environment = environment
-#         self.reward_system = reward_system
-#         self.epochs = epochs
-    
-
-#     def train(self):
-#         for epoch in range(self.epochs):
-#             print(f"Epoch {epoch+1}/{self.epochs}")
-#             self.environment.execute()
-#             evaluations = self.environment.evaluate()
-#             reward = self.reward_system.calculate_reward(evaluations)
-#             print(f"Reward: {reward}")
-
-
-
-# class DataLoader:
-#     def __init__(self, data):
-#         self.data = data
-
-
-#     def split_data(self, test_size=0.25):
-#         # TODO: Embaralhar os dados.
-
-#         train_size = int(len(self.data) * (1 - test_size))
-#         return self.data[:train_size], self.data[train_size:]
-    
-
-# class Logger:
-#     def __init__(self):
-#         self.logs = []
-    
-
-#     def log(self, epoch, evaluations, reward):
-#         self.logs.append({"epoch": epoch, "evaluations": evaluations, "reward": reward})
-    
-
-#     def show_logs(self):
-#         for log in self.logs:
-#             print(log)
