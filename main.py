@@ -9,7 +9,6 @@ from utils import epsilon_greedy_decay, calculate_reward, update_q_value
 # TESTE
 np.random.seed(42)
 data = np.random.randn(200, 5)  
-print(np.max(data), np.min(data))
 
 initial_metrics = {
     "silhouette_score": 0.3,  

@@ -59,6 +59,9 @@ class System:
             self.results.append([self.coder.evaluation_results, reward, action])
             self.results_flag.append((self.coder.llm_error_flag, self.coder.parameters_error_flag))
 
+            print("LLM Flag:", self.coder.llm_error_flag)
+            print("Parameters Flag:", self.coder.parameters_error_flag)
+            print("Metrics:", self.coder.evaluation_results)
             print("Reward: ", reward)
             print("-------------------------\n")
 

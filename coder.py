@@ -64,7 +64,7 @@ class Coder(LLMAgent):
             elif "dbscan" in response.lower():
                 self.algorithm_choice = "dbscan"
                 self.cluster_model = DBSCAN()
-
+                
             else:
                 raise ValueError(f"Unexpected algorithm choice: {response}")
             
@@ -73,7 +73,7 @@ class Coder(LLMAgent):
 
             elif self.algorithm_choice == "dbscan":
                 self.cluster_model.set_params(**self.parameters_dbscan)
-
+                
             self.fit_model()
             self.evaluate_clusters() 
 
@@ -203,7 +203,7 @@ class Coder(LLMAgent):
                 mask &= (self.data[:, i] >= Q1) & (self.data[:, i] <= Q2)
 
         self.data = self.data[mask.values]
-        self.df = self.df[mask].reset_index(drop=True)
+        self.df = self.df[mask].reset_index()
 
         self.evaluate_clusters()
 
