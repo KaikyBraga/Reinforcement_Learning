@@ -64,17 +64,14 @@ class Reviewer(LLMAgent):
         if self.coder.llm_error_flag:
             response = "You didn't follow the instructions exactly. Please stick to the specifications more closely."
             self.coder.add_to_history({"role": "user", "content": response})
-            self.coder.llm_error_flag = False
 
 
     def evaluate_parameters(self):
         if self.coder.parameters_error_flag:
             response = "Your parameters don't seem to be working for the data. Try adjusting the model and ensure the parameters are appropriate for the dataset."
             self.coder.add_to_history({"role": "user", "content": response})
-            self.coder.parameters_error_flag = False
 
     def evaluate_n_clusters(self):
         if self.coder.n_cluster_invalid_flag:
             response = "The number of clusters can't be less than 2! Adjust the model and ensure that the number of clusters are appropriate for the dataset."
             self.coder.add_to_history({"role": "user", "content": response})
-            self.coder.n_cluster_invalid_flag = False

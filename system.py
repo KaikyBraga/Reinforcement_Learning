@@ -72,6 +72,8 @@ class System:
             print("Reward: ", reward)
             print("-------------------------\n")
 
+            self.coder.reset_flags()
+
         self.labels = self.coder.get_labels()
 
         print("Training completed.")

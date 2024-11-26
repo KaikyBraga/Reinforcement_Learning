@@ -302,15 +302,11 @@ class Coder(LLMAgent):
 
         self.evaluate_clusters     
 
-    def reset(self):
-        self.reset_data()
-        
-        # Reset flags
+    def reset_flags(self):
         self.llm_error_flag = False  
         self.parameters_error_flag = False 
         self.n_cluster_invalid_flag = False 
 
-        # TODO: Colocar mais coisas resetaveis
 
 
     def fit_model(self):
