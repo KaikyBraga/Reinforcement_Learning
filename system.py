@@ -63,10 +63,11 @@ class System:
             previous_davies_bouldin = new_davies_bouldin
 
             self.results.append([self.coder.evaluation_results, reward, action])
-            self.results_flag.append((self.coder.llm_error_flag, self.coder.parameters_error_flag))
+            self.results_flag.append((self.coder.llm_error_flag, self.coder.parameters_error_flag, self.coder.n_cluster_invalid_flag))
 
             print("LLM Flag:", self.coder.llm_error_flag)
             print("Parameters Flag:", self.coder.parameters_error_flag)
+            print("Invalid n clusters flag:", self.coder.n_cluster_invalid_flag)
             print("Metrics:", self.coder.evaluation_results)
             print("Reward: ", reward)
             print("-------------------------\n")
@@ -110,14 +111,16 @@ class System:
 
 
     def plot_error_flags(self):
-        error_flags_count = {"LLM Error": 0, "Parameter Error": 0}
+        error_flags_count = {"LLM Error": 0, "Parameter Error": 0, "n_cluster Error":0}
 
         for flag in self.results_flag:
-            llm_error, param_error = flag
+            llm_error, param_error, n_cluster_error = flag
             if llm_error:
                 error_flags_count["LLM Error"] += 1
             if param_error:
                 error_flags_count["Parameter Error"] += 1
+            if n_cluster_error:
+                error_flags_count["n_cluster Error"] += 1
 
         flags = list(error_flags_count.keys())
         counts = list(error_flags_count.values())

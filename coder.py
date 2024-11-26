@@ -297,15 +297,20 @@ class Coder(LLMAgent):
     # Action 5
     def reset_data(self):
         """Reset the data to the original state."""
-
-        # Reset flags
-        self.llm_error_flag = False  
-        self.parameters_error_flag = False  
-
         self.data = self.__backup_data
         self.df = self.__backup_df    
 
         self.evaluate_clusters     
+
+    def reset(self):
+        self.reset_data()
+        
+        # Reset flags
+        self.llm_error_flag = False  
+        self.parameters_error_flag = False 
+        self.n_cluster_invalid_flag = False 
+
+        # TODO: Colocar mais coisas resetaveis
 
 
     def fit_model(self):
