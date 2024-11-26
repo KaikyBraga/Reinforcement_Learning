@@ -29,6 +29,7 @@ class Coder(LLMAgent):
         self.parameters_dbscan = {"eps": 0.5, "min_samples": 5}
         self.llm_error_flag = False # Flag to track LLM's delirium
         self.parameters_error_flag = False # Flag to track invallid parameters
+        self.n_cluster_invalid_flag = False # Flag to track invallid n_clusters
 
 
     # Action 1
@@ -339,9 +340,10 @@ class Coder(LLMAgent):
 
         if n_clusters <= 1:
             self.evaluation_results = {
-                "silhouette_score": None,
-                "davies_bouldin_score": None,
+                "silhouette_score": -1,
+                "davies_bouldin_score": 0,
                 "n_clusters": n_clusters}
+            self.n_cluster_invalid_flag = True
             return
 
         self.evaluation_results = {

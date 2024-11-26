@@ -5,7 +5,7 @@ class System:
     def __init__(self, coder, reviewer):
         self.coder = coder
         self.reviewer = reviewer
-        self.actions = ["Change_Model", "Fix_Parameters", "Remove_Outliers", "Normalize_Data", "Reset_Data"]
+        self.actions = ["Change_Model", "Fix_Parameters", "Normalize_Data", "Reset_Data"] #, "Remove_Outliers"
         self.q_values_coder = {action: 0 for action in self.actions}
         self.labels = None
         self.results = []
@@ -30,14 +30,19 @@ class System:
             # Select action
             if action == "Change_Model":
                 self.coder.choose_algorithm()
+
             elif action == "Fix_Parameters":
                 self.coder.adjust_parameters()
+
             elif action == "Remove_Outliers":
                 self.coder.remove_outliers()
+
             elif action == "Normalize_Data":
                 self.coder.choose_norm()
+
             elif action == "Reset_Data":
                 self.coder.reset_data()
+
             new_labels = self.coder.get_labels()
 
             reward = calculate_reward(self.coder.data, previous_labels, new_labels, lambda_k, lambda_size, t_min=5)
@@ -49,6 +54,7 @@ class System:
             self.reviewer.evaluate_reward(reward, new_silhouette, previous_silhouette, new_davies_bouldin, previous_davies_bouldin, new_k, size_penalty, lambda_k, lambda_size)
             self.reviewer.evaluate_delirious()
             self.reviewer.evaluate_parameters()
+            self.reviewer.evaluate_n_clusters()
 
             update_q_value(self.q_values_coder, action, reward)
 
