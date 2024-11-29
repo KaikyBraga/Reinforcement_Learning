@@ -34,9 +34,6 @@ class System:
             elif action == "Fix_Parameters":
                 self.coder.adjust_parameters()
 
-            elif action == "Remove_Outliers":
-                self.coder.remove_outliers()
-
             elif action == "Normalize_Data":
                 self.coder.choose_norm()
 
@@ -95,7 +92,7 @@ class System:
 
 
     def plot_action_frequency(self):
-        action_count = {"Change": 0, "Fix": 0}
+        action_count = {"Change_Model": 0, "Fix_Parameters": 0, "Normalize_Data": 0, "Reset_Data": 0}
 
         for result in self.results:
             action = result[2]  
