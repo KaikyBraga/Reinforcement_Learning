@@ -1,4 +1,4 @@
-from sklearn.cluster import KMeans, DBSCAN
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, GaussianMixture, MeanShift
 from sklearn.metrics import silhouette_score, davies_bouldin_score
 from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler, StandardScaler, RobustScaler, Normalizer
 from llm import LLMAgent
@@ -18,39 +18,40 @@ class Coder(LLMAgent):
         super().__init__(model)
         base_prompt = "You are a data scientist specialized in machine learning. Your task is to solve clustering problem. Return only the requested requirement, without additional explanations. Focus solely on the specifications provided in the prompt."
         self.history = [{"role": "user", "content": base_prompt}]
-        self.df = df # Pandas DataFrame
-        self.data = data # Array of df
+        self.df = df  # Pandas DataFrame
+        self.data = data  # Array of df
         self.__backup_data = data
         self.__backup_df = df
-        self.cluster_model = KMeans()
-        self.algorithm_choice = "kmeans"  
+        self.cluster_model = KMeans()  # Default Clustering Model
+        self.algorithm_choice = "kmeans"
         self.evaluation_results = evaluation_results_initial
         self.parameters_kmeans = {"n_clusters": 3}
         self.parameters_dbscan = {"eps": 0.5, "min_samples": 5}
-        self.llm_error_flag = False # Flag to track LLM's delirium
-        self.parameters_error_flag = False # Flag to track invallid parameters
-        self.n_cluster_invalid_flag = False # Flag to track invallid n_clusters
+        self.parameters_agglomerative = {"n_clusters": 3}
+        self.parameters_gmm = {"n_components": 3}
+        self.parameters_meanshift = {}  # MeanShift does not have n_clusters, it is based on bandwidth
+        self.llm_error_flag = False  # Flag to track LLM's delirium
+        self.parameters_error_flag = False  # Flag to track invalid parameters
+        self.n_cluster_invalid_flag = False  # Flag to track invalid n_clusters
 
 
     # Action 1
     def choose_algorithm(self):
         """Select clustering algorithm, based on provided metrics."""
 
-        # Reset flags
-        self.llm_error_flag = False  
-        self.parameters_error_flag = False  
-        
+        self.reset_flags()
+
         prompt = (
-            "Choose between the clustering algorithms 'kmeans' or 'dbscan'. "
+            "Choose between the clustering algorithms 'kmeans', 'dbscan', 'agglomerative', 'gmm', or 'meanshift'. "
             "Base your decision on the previous parameters and metrics: "
             f"Silhouette Score = {self.evaluation_results['silhouette_score']}, "
             f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
             f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
             "Select the algorithm that would potentially improve the clustering quality, "
             "maximizing the Silhouette Score and minimizing the Davies-Bouldin Score. "
-            "RETURN ONLY THE NAME OF THE SELECTED ALGORITHM: 'kmeans' or 'dbscan'."
+            "RETURN ONLY THE NAME OF THE SELECTED ALGORITHM: 'kmeans', 'dbscan', 'agglomerative', 'gmm', or 'meanshift'."
         )
-        
+
         self.add_to_history({"role": "user", "content": prompt})
         response = self.generate(prompt)
         self.add_to_history({"role": "assistant", "content": response})
@@ -65,18 +66,40 @@ class Coder(LLMAgent):
             elif "dbscan" in response.lower():
                 self.algorithm_choice = "dbscan"
                 self.cluster_model = DBSCAN()
-                
+
+            elif "agglomerative" in response.lower():
+                self.algorithm_choice = "agglomerative"
+                self.cluster_model = AgglomerativeClustering()
+
+            elif "gmm" in response.lower():
+                self.algorithm_choice = "gmm"
+                self.cluster_model = GaussianMixture()
+
+            elif "meanshift" in response.lower():
+                self.algorithm_choice = "meanshift"
+                self.cluster_model = MeanShift()
+
             else:
                 raise ValueError(f"Unexpected algorithm choice: {response}")
-            
+
+            # Set the parameters based on selected algorithm
             if self.algorithm_choice == "kmeans":
                 self.cluster_model.set_params(**self.parameters_kmeans)
 
             elif self.algorithm_choice == "dbscan":
                 self.cluster_model.set_params(**self.parameters_dbscan)
-                
+
+            elif self.algorithm_choice == "agglomerative":
+                self.cluster_model.set_params(**self.parameters_agglomerative)
+
+            elif self.algorithm_choice == "gmm":
+                self.cluster_model.set_params(**self.parameters_gmm)
+
+            elif self.algorithm_choice == "meanshift":
+                self.cluster_model.set_params(**self.parameters_meanshift)
+
             self.fit_model()
-            self.evaluate_clusters() 
+            self.evaluate_clusters()
 
         except Exception as e:
             print(f"Error during algorithm selection: {e}")
@@ -93,9 +116,7 @@ class Coder(LLMAgent):
         if not self.algorithm_choice:
             raise ValueError("Algorithm has not been chosen yet.")
         
-        # Reset flags
-        self.llm_error_flag = False  
-        self.parameters_error_flag = False  
+        self.reset_flags() 
 
         if self.algorithm_choice == "kmeans":
             prompt = (
@@ -114,6 +135,33 @@ class Coder(LLMAgent):
                 f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
                 f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
                 "RETURN ONLY THE ADJUSTED PARAMETERS IN THE FORMAT: 'eps=<new_value>, min_samples=<new_value>'."
+            )
+        elif self.algorithm_choice == "agglomerative":
+            prompt = (
+                "Based on the previous results, optimize the `n_clusters` parameter "
+                "for the AgglomerativeClustering algorithm. Use the provided metrics for decision-making: "
+                f"Silhouette Score = {self.evaluation_results['silhouette_score']}, "
+                f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
+                f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
+                "RETURN ONLY THE ADJUSTED PARAMETERS IN THE FORMAT: 'n_clusters=<new_value>'."
+            )
+        elif self.algorithm_choice == "gmm":
+            prompt = (
+                "Based on the previous results, optimize the `n_components` parameter "
+                "for the GaussianMixtureModel algorithm. Use the provided metrics for decision-making: "
+                f"Silhouette Score = {self.evaluation_results['silhouette_score']}, "
+                f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
+                f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
+                "RETURN ONLY THE ADJUSTED PARAMETERS IN THE FORMAT: 'n_components=<new_value>'."
+            )
+        elif self.algorithm_choice == "meanshift":
+            prompt = (
+                "Based on the previous results, optimize the `bandwidth` parameter "
+                "for the MeanShift algorithm. Use the provided metrics for decision-making: "
+                f"Silhouette Score = {self.evaluation_results['silhouette_score']}, "
+                f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
+                f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
+                "RETURN ONLY THE ADJUSTED PARAMETERS IN THE FORMAT: 'bandwidth=<new_value>'."
             )
         else:
             raise ValueError(f"Unsupported algorithm: {self.algorithm_choice}")
@@ -134,11 +182,17 @@ class Coder(LLMAgent):
                 params[key.strip()] = float(value.strip()) if "." in value else int(value.strip())
             self.cluster_model.set_params(**params)
             
+            # Apply the parameters for each algorithm
             if self.algorithm_choice == "kmeans":
                 self.cluster_model.set_params(**self.parameters_kmeans)
-
             elif self.algorithm_choice == "dbscan":
                 self.cluster_model.set_params(**self.parameters_dbscan)
+            elif self.algorithm_choice == "agglomerative":
+                self.cluster_model.set_params(**self.parameters_agglomerative)
+            elif self.algorithm_choice == "gmm":
+                self.cluster_model.set_params(**self.parameters_gmm)
+            elif self.algorithm_choice == "meanshift":
+                self.cluster_model.set_params(**self.parameters_meanshift)
 
             self.fit_model() 
             self.evaluate_clusters() 
@@ -147,7 +201,7 @@ class Coder(LLMAgent):
             print(f"Error parsing parameters: {e}. Using default parameters.")
             self.llm_error_flag = True  # Mark as error
 
-        if self.evaluation_results["silhouette_score"] == None:
+        if self.evaluation_results["silhouette_score"] is None:
             self.parameters_error_flag = True  # Mark as error
 
 
@@ -155,9 +209,7 @@ class Coder(LLMAgent):
     def remove_outliers(self):
         """Remove outliers from the dataset."""
 
-        # Reset flag
-        self.llm_error_flag = False  
-        self.parameters_error_flag = False  
+        self.reset_flags()
 
         columns = self.__backup_df.columns
 
@@ -209,12 +261,11 @@ class Coder(LLMAgent):
         self.evaluate_clusters()
 
 
+    # Action 4
     def choose_norm(self):
         """Choose the normalization method based on the data type of the columns."""
 
-        # Reset flag
-        self.llm_error_flag = False  
-        self.parameters_error_flag = False  
+        self.reset_flags()
 
         column_types = {
             "categorical": [col for col in self.__backup_df.columns if self.__backup_df[col].dtype == "object"],
