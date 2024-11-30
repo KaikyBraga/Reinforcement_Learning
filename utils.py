@@ -27,12 +27,14 @@ def calculate_reward(X, previous_labels, new_labels, lambda_k=0.1, lambda_size=0
     """
 
     # Calculate metrics
-    previous_silhouette = silhouette_score(X, previous_labels) if len(set(previous_labels)) > 1 else 0
-    new_silhouette = silhouette_score(X, new_labels) if len(set(new_labels)) > 1 else 0
+    previous_silhouette = silhouette_score(X, previous_labels) if len(set(previous_labels)) > 1 else -1
+    new_silhouette = silhouette_score(X, new_labels) if len(set(new_labels)) > 1 else -1
     
     previous_davies_bouldin = davies_bouldin_score(X, previous_labels) if len(set(previous_labels)) > 1 else np.inf
     new_davies_bouldin = davies_bouldin_score(X, new_labels) if len(set(new_labels)) > 1 else np.inf
 
+    if previous_davies_bouldin == -np.inf:
+        previous_davies_bouldin = -1
     # Base reward (improvement in metrics)
     metric_reward = (new_silhouette - previous_silhouette) - (new_davies_bouldin - previous_davies_bouldin)
 

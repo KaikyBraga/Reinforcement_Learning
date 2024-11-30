@@ -1,4 +1,5 @@
-from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, GaussianMixture, MeanShift
+from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering, MeanShift
+from sklearn.mixture import GaussianMixture
 from sklearn.metrics import silhouette_score, davies_bouldin_score
 from sklearn.preprocessing import MaxAbsScaler, MinMaxScaler, StandardScaler, RobustScaler, Normalizer
 from llm import LLMAgent
@@ -42,14 +43,14 @@ class Coder(LLMAgent):
         self.reset_flags()
 
         prompt = (
-            "Choose between the clustering algorithms 'kmeans', 'dbscan', 'agglomerative', 'gmm', or 'meanshift'. "
+            "Choose between the clustering algorithms 'kmeans', 'dbscan', 'agglomerative', or 'meanshift'. "
             "Base your decision on the previous parameters and metrics: "
             f"Silhouette Score = {self.evaluation_results['silhouette_score']}, "
             f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
             f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
             "Select the algorithm that would potentially improve the clustering quality, "
             "maximizing the Silhouette Score and minimizing the Davies-Bouldin Score. "
-            "RETURN ONLY THE NAME OF THE SELECTED ALGORITHM: 'kmeans', 'dbscan', 'agglomerative', 'gmm', or 'meanshift'."
+            "RETURN ONLY THE NAME OF THE SELECTED ALGORITHM: 'kmeans', 'dbscan', 'agglomerative', or 'meanshift'."
         )
 
         self.add_to_history({"role": "user", "content": prompt})
@@ -96,7 +97,7 @@ class Coder(LLMAgent):
                 self.cluster_model.set_params(**self.parameters_gmm)
 
             elif self.algorithm_choice == "meanshift":
-                self.cluster_model.set_params(**self.parameters_meanshift)
+                self.cluster_model.set_params()
 
             self.fit_model()
             self.evaluate_clusters()
@@ -391,12 +392,8 @@ class Coder(LLMAgent):
         n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
 
         if n_clusters <= 1:
-            self.evaluation_results = {
-                "silhouette_score": -1,
-                "davies_bouldin_score": 0,
-                "n_clusters": n_clusters}
             self.n_cluster_invalid_flag = True
-            return
+            pass
 
         self.evaluation_results = {
             "silhouette_score": silhouette_score(self.data, labels),

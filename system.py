@@ -17,15 +17,23 @@ class System:
         previous_labels = self.coder.get_labels()
         previous_silhouette = self.coder.evaluation_results["silhouette_score"]
         previous_davies_bouldin = self.coder.evaluation_results["davies_bouldin_score"]
-
+        previous_action = "init"
 
         for epoch in range(epochs):
 
             # epsilon greedy
             action, epsilon = epsilon_greedy_decay(self.actions, self.q_values_coder, epsilon, epsilon_min, decay_rate)
-
+ 
             print("\nEpoch", epoch)
             print("Action:", action)
+
+            if action == previous_action:
+                if previous_action == "Reset_Data" or previous_action == "Normaliza_Data":
+                    continue 
+            elif previous_action == "init":
+                if action == "Reset_Data":
+                    continue
+            
 
             # Select action
             if action == "Change_Model":
@@ -39,6 +47,7 @@ class System:
 
             elif action == "Reset_Data":
                 self.coder.reset_data()
+             
 
             new_labels = self.coder.get_labels()
 
@@ -70,6 +79,8 @@ class System:
             print("-------------------------\n")
 
             self.coder.reset_flags()
+
+            previous_action = action
 
         self.labels = self.coder.get_labels()
 
