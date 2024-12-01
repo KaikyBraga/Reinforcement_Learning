@@ -324,7 +324,6 @@ class Coder(LLMAgent):
         """Evaluate clusters using Silhouette and Davies-Bouldin scores."""
 
         labels = self.get_labels()
-        print("labels:", set(labels))
         n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
 
         if n_clusters <= 1:

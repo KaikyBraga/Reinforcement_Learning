@@ -36,8 +36,8 @@ def calculate_reward(X, previous_labels, new_labels,
     previous_silhouette = silhouette_score(X, previous_labels) if len(set(previous_labels)) > 1 else -1
     new_silhouette = silhouette_score(X, new_labels) if len(set(new_labels)) > 1 else -1
     
-    previous_davies_bouldin = davies_bouldin_score(X, previous_labels)
-    new_davies_bouldin = davies_bouldin_score(X, new_labels)
+    previous_davies_bouldin = davies_bouldin_score(X, previous_labels) if len(set(previous_labels)) > 1 else -1
+    new_davies_bouldin = davies_bouldin_score(X, new_labels) if len(set(new_labels)) > 1 else -1
 
     # Transform Davies-Bouldin to its inverse
     previous_davies_bouldin_inv = 1 / previous_davies_bouldin

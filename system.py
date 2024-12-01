@@ -50,7 +50,9 @@ class System:
              
             new_labels = self.coder.get_labels()
 
-            reward = calculate_reward(self.coder.data, previous_labels, new_labels, lambda_silhouette, lambda_davies, lambda_k, lambda_size, t_min)
+            # Reward Update if the number of clusters is greater than 1
+            if len(set(new_labels)) > 1 and len(set(previous_labels)) > 1:
+                reward = calculate_reward(self.coder.data, previous_labels, new_labels, lambda_silhouette, lambda_davies, lambda_k, lambda_size, t_min)
 
             new_silhouette = self.coder.evaluation_results["silhouette_score"]
             new_davies_bouldin = self.coder.evaluation_results["davies_bouldin_score"]
@@ -72,7 +74,7 @@ class System:
 
             print("LLM Flag:", self.coder.llm_error_flag)
             print("Parameters Flag:", self.coder.parameters_error_flag)
-            print("Invalid n clusters flag:", self.coder.n_cluster_invalid_flag)
+            print("Invalid n clusters Flag:", self.coder.n_cluster_invalid_flag)
             print("Metrics:", self.coder.evaluation_results)
             print("Reward: ", reward)
             print("-------------------------\n")
@@ -84,8 +86,6 @@ class System:
         self.labels = self.coder.get_labels()
 
         print("Training completed.")
-
-        return self.results, self.results_flag
     
     
     def plot_action_frequency(self):
