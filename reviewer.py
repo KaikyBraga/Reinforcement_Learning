@@ -15,37 +15,45 @@ class Reviewer(LLMAgent):
         self.history = [{"role": "user", "content": base_prompt}]
 
 
-    def evaluate_reward(self, reward, new_silhouette, previous_silhouette, new_davies_bouldin, previous_davies_bouldin, new_k, size_penalty, lambda_k, lambda_size):
-        # print(new_silhouette, previous_silhouette, new_davies_bouldin, previous_davies_bouldin, new_k, size_penalty, lambda_k, lambda_size)
+    def evaluate_reward(self, reward, new_silhouette, previous_silhouette, new_davies_bouldin, previous_davies_bouldin, new_k, size_penalty, lambda_k, lambda_size, lambda_silhouette, lambda_davies):
+        
         prompt = f"""
-                The 'calculate_reward' function calculates the reward for a clustering agent. The reward is based on three main components:
+            The 'calculate_reward' function evaluates the quality of clustering results and computes a reward based on multiple components. The goal is to balance the improvement in cluster quality with penalties for undesirable configurations. The reward calculation is as follows:
 
-                1. Quality Metrics:
-                - Silhouette Score: Measures the separation between clusters. An improvement in the Silhouette Score contributes positively to the reward.
-                - Davies-Bouldin Score: Measures the compactness and separation of clusters. A reduction in the Davies-Bouldin Score contributes positively to the reward.
+            ### Components of the Reward:
+            
+            **1. Quality Metrics**:
+            - **Silhouette Score**: Measures cluster separation. An improvement (positive difference between `new_silhouette` and `previous_silhouette`) increases the reward, scaled by `lambda_silhouette`.
+            - **Davies-Bouldin Score**: Measures cluster compactness and separation. A lower score is better, so the reward considers an *inverse improvement* (`1 / new_davies_bouldin - 1 / previous_davies_bouldin`), scaled by `lambda_davies`.
 
-                2. Penalties:
-                - Number of Clusters (k): Penalizes if the number of clusters is too high, with the penalty being proportional to the number of clusters.
-                - Cluster Size: Penalizes clusters that have fewer elements than the expected minimum size (`t_min`).
+            **2. Penalty Metrics**:
+            - **Number of Clusters (k)**: Penalizes if the number of clusters (`new_k`) is too high. The penalty is proportional to `lambda_k * new_k`.
+            - **Cluster Size**: Penalizes configurations with small clusters (clusters smaller than a defined threshold `t_min`). The penalty scales with `lambda_size * size_penalty`, where `size_penalty` is the count of such small clusters.
 
-                The formula for calculating the reward is as follows:
+            ### Reward Formula:
+            The reward is calculated as:
+            
+            reward = ((lambda_silhouette * silhouette_improvement) + (lambda_davies * davies_improvement)) - (lambda_k * new_k) - (lambda_size * size_penalty)
 
-                reward = ((new_silhouette - previous_silhouette) - (new_davies_bouldin - previous_davies_bouldin)) - (lambda_k * new_k) - (lambda_size * size_penalty)
+            **Where**:
+            - `silhouette_improvement = new_silhouette - previous_silhouette`
+            - `davies_improvement = 1 / new_davies_bouldin - 1 / previous_davies_bouldin`
+            - `new_silhouette` ({new_silhouette:.3f}): Silhouette Score after the agent's action.
+            - `previous_silhouette` ({previous_silhouette:.3f}): Silhouette Score before the agent's action.
+            - `new_davies_bouldin` ({new_davies_bouldin:.3f}): Davies-Bouldin Score after the agent's action.
+            - `previous_davies_bouldin` ({previous_davies_bouldin:.3f}): Davies-Bouldin Score before the agent's action.
+            - `new_k` ({new_k}): Number of clusters after the action.
+            - `size_penalty` ({size_penalty}): Penalty for clusters smaller than `t_min`.
+            - `lambda_k` ({lambda_k}): Weight for penalizing excessive clusters.
+            - `lambda_size` ({lambda_size}): Weight for penalizing small clusters.
+            - `lambda_silhouette` ({lambda_silhouette}): Weight for improvements in the Silhouette Score.
+            - `lambda_davies` ({lambda_davies}): Weight for improvements in the Davies-Bouldin Score.
 
-                Where:
-                - new_silhouette ({new_silhouette:.3f}): Silhouette Score after the agent's action.
-                - previous_silhouette ({previous_silhouette:.3f}): Silhouette Score before the agent's action.
-                - new_davies_bouldin ({new_davies_bouldin:.3f}): Davies-Bouldin Score after the agent's action.
-                - previous_davies_bouldin ({previous_davies_bouldin:.3f}): Davies-Bouldin Score before the agent's action.
-                - new_k ({new_k}): Number of clusters after the action.
-                - size_penalty ({size_penalty}): Penalty associated with clusters having fewer than `t_min` elements.
-                - lambda_k ({lambda_k}): Penalty for an excessive number of clusters.
-                - lambda_size ({lambda_size}): Penalty for small clusters.
+            ### Objective:
+            This function is designed to incentivize the agent to maximize the quality of the clustering solution, as measured by Silhouette and Davies-Bouldin Scores, while keeping the number of clusters and the cluster sizes within reasonable bounds.
 
-                The goal of this function is to encourage the agent to improve the quality of the clusters while controlling the number and size of the clusters in a balanced way.
-
-                Given a reward value calculated based on the 'calculate_reward' function, please provide a score from 0 to 10 for the result (equals to {reward:.3f}). RETURN ONLY THE NUMBER REFERRING TO THE SCORE, NOTHING ELSE.
-                """
+            Given the calculated reward ({reward:.3f}), please assign a score from 0 to 10 based on its effectiveness. RETURN ONLY THE NUMBER REFERRING TO THE SCORE, NOTHING ELSE.
+        """
         
         response = self.generate(prompt)
 

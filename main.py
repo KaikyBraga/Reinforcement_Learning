@@ -26,4 +26,4 @@ reviewer = Reviewer(coder)
 
 sistema = System(coder, reviewer)
 
-sistema.train(epochs=10, epsilon=1.0, epsilon_min=0.01, decay_rate=0.99, size_penalty=0.5, lambda_k=0.5, lambda_size=0.5)
+sistema.train(epochs=5, epsilon=1.0, epsilon_min=0.01, decay_rate=0.99, size_penalty=0.5, lambda_silhouette=1, lambda_davies=2.5, lambda_k=0.5, lambda_size=0.5, t_min=10)

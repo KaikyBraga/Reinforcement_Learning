@@ -121,48 +121,43 @@ class Coder(LLMAgent):
 
         if self.algorithm_choice == "kmeans":
             prompt = (
-                "Based on the previous results, optimize the `n_clusters` parameter "
-                "for the KMeans algorithm. Use the provided metrics for decision-making: "
+                "Optimize the `n_clusters` parameter for the KMeans algorithm based on the following metrics: "
                 f"Silhouette Score = {self.evaluation_results['silhouette_score']}, "
                 f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
                 f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
-                "RETURN ONLY THE ADJUSTED PARAMETERS IN THE FORMAT: 'n_clusters=<new_value>'."
+                "Provide a single integer value for `n_clusters` in the format: '<new_value>'."
             )
         elif self.algorithm_choice == "dbscan":
             prompt = (
-                "Based on the previous results, optimize the `eps` and `min_samples` parameters "
-                "for the DBSCAN algorithm. Use the provided metrics for decision-making: "
+                "Optimize the `eps` and `min_samples` parameters for the DBSCAN algorithm based on the following metrics: "
                 f"Silhouette Score = {self.evaluation_results['silhouette_score']}, "
                 f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
                 f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
-                "RETURN ONLY THE ADJUSTED PARAMETERS IN THE FORMAT: 'eps=<new_value>, min_samples=<new_value>'."
+                "Provide two numeric values separated by a comma in the format: '<eps_value>, <min_samples_value>'."
             )
         elif self.algorithm_choice == "agglomerative":
             prompt = (
-                "Based on the previous results, optimize the `n_clusters` parameter "
-                "for the AgglomerativeClustering algorithm. Use the provided metrics for decision-making: "
+                "Optimize the `n_clusters` parameter for the AgglomerativeClustering algorithm based on the following metrics: "
                 f"Silhouette Score = {self.evaluation_results['silhouette_score']}, "
                 f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
                 f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
-                "RETURN ONLY THE ADJUSTED PARAMETERS IN THE FORMAT: 'n_clusters=<new_value>'."
+                "Provide a single integer value for `n_clusters` in the format: '<new_value>'."
             )
         elif self.algorithm_choice == "gmm":
             prompt = (
-                "Based on the previous results, optimize the `n_components` parameter "
-                "for the GaussianMixtureModel algorithm. Use the provided metrics for decision-making: "
+                "Optimize the `n_components` parameter for the GaussianMixtureModel algorithm based on the following metrics: "
                 f"Silhouette Score = {self.evaluation_results['silhouette_score']}, "
                 f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
                 f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
-                "RETURN ONLY THE ADJUSTED PARAMETERS IN THE FORMAT: 'n_components=<new_value>'."
+                "Provide a single integer value for `n_components` in the format: '<new_value>'."
             )
         elif self.algorithm_choice == "meanshift":
             prompt = (
-                "Based on the previous results, optimize the `bandwidth` parameter "
-                "for the MeanShift algorithm. Use the provided metrics for decision-making: "
+                "Optimize the `bandwidth` parameter for the MeanShift algorithm based on the following metrics: "
                 f"Silhouette Score = {self.evaluation_results['silhouette_score']}, "
                 f"Davies-Bouldin Score = {self.evaluation_results['davies_bouldin_score']}, "
                 f"Number of Clusters = {self.evaluation_results.get('n_clusters', 'unknown')}. "
-                "RETURN ONLY THE ADJUSTED PARAMETERS IN THE FORMAT: 'bandwidth=<new_value>'."
+                "Provide a single numeric value for `bandwidth` in the format: '<new_value>'."
             )
         else:
             raise ValueError(f"Unsupported algorithm: {self.algorithm_choice}")
@@ -178,91 +173,30 @@ class Coder(LLMAgent):
                 response = response.strip("'")
 
             params = {}
-            for param in response.split(","):
-                key, value = param.split("=")
-                params[key.strip()] = float(value.strip()) if "." in value else int(value.strip())
-            self.cluster_model.set_params(**params)
+            if self.algorithm_choice == "dbscan":
+                eps, min_samples = map(float, response.split(","))
+                params["eps"] = eps
+                params["min_samples"] = int(min_samples)
+            else:
+                key = (
+                    "n_clusters" if self.algorithm_choice in ["kmeans", "agglomerative"] 
+                    else "n_components" if self.algorithm_choice == "gmm" 
+                    else "bandwidth"
+                )
+                params[key] = float(response) if "." in response else int(response)
             
-            # Apply the parameters for each algorithm
-            if self.algorithm_choice == "kmeans":
-                self.cluster_model.set_params(**self.parameters_kmeans)
-            elif self.algorithm_choice == "dbscan":
-                self.cluster_model.set_params(**self.parameters_dbscan)
-            elif self.algorithm_choice == "agglomerative":
-                self.cluster_model.set_params(**self.parameters_agglomerative)
-            elif self.algorithm_choice == "gmm":
-                self.cluster_model.set_params(**self.parameters_gmm)
-            elif self.algorithm_choice == "meanshift":
-                self.cluster_model.set_params(**self.parameters_meanshift)
+            self.cluster_model.set_params(**params)
 
-            self.fit_model() 
-            self.evaluate_clusters() 
+            self.fit_model()
+            self.evaluate_clusters()
 
         except Exception as e:
             print(f"Error parsing parameters: {e}. Using default parameters.")
             self.llm_error_flag = True  # Mark as error
-
-        if self.evaluation_results["silhouette_score"] is None:
             self.parameters_error_flag = True  # Mark as error
 
 
     # Action 3
-    def remove_outliers(self):
-        """Remove outliers from the dataset."""
-
-        self.reset_flags()
-
-        columns = self.__backup_df.columns
-
-        prompt = f"""
-        You are evaluating a clustering task with the following metrics:
-        - Silhouette Score: {self.evaluation_results['silhouette_score']}
-        - Davies-Bouldin Index: {self.evaluation_results['davies_bouldin_score']}
-
-        Suggest a large percentage of the data that should remain after removing outliers. 
-        This percentage should optimize the clustering metrics, ensuring a balance between compact clusters 
-        (improving the Silhouette score) and minimizing overlap (reducing the Davies-Bouldin Index). 
-        The percentage should represent the data that stays after outlier removal.
-
-        RETURN A SINGLE NUMBER (percentage) BETWEEN 0 AND 1.
-        """
-
-        self.llm_error_flag = False  # Reset flag
-
-        response = self.generate(prompt)
-
-        print("Response:", response)
-    
-        try:
-            pct = float(response)
-            if not (0 < pct < 1):
-                self.llm_error_flag = True
-                return
-            
-        except Exception:
-            pass
-
-        # Quantiles limits 
-        q1 = (1 - pct) / 2
-        q2 = pct + q1
-
-        mask = pd.Series([True] * len(self.data))  
-
-        for i, col in enumerate(columns):
-            if self.df[col].dtype in ["float64", "float32", "int64", "int32"]:  
-                Q1 = np.quantile(self.data[:, i], q1)  
-                Q2 = np.quantile(self.data[:, i], q2)  
-
-                # Atualization of the mask
-                mask &= (self.data[:, i] >= Q1) & (self.data[:, i] <= Q2)
-
-        self.data = self.data[mask.values]
-        self.df = self.df[mask].reset_index()
-
-        self.evaluate_clusters()
-
-
-    # Action 4
     def choose_norm(self):
         """Choose the normalization method based on the data type of the columns."""
 
@@ -346,13 +280,14 @@ class Coder(LLMAgent):
             self.llm_error_flag = True  # Mark as error
 
 
-    # Action 5
+    # Action 4
     def reset_data(self):
         """Reset the data to the original state."""
-        self.data = self.__backup_data
-        self.df = self.__backup_df    
+        self.data = self.__backup_data.copy()
+        self.df = self.__backup_df.copy()      
 
-        self.evaluate_clusters     
+        self.fit_model()  
+
 
     def reset_flags(self):
         self.llm_error_flag = False  
@@ -389,14 +324,15 @@ class Coder(LLMAgent):
         """Evaluate clusters using Silhouette and Davies-Bouldin scores."""
 
         labels = self.get_labels()
+        print("labels:", set(labels))
         n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
 
         if n_clusters <= 1:
             self.n_cluster_invalid_flag = True
-            pass
 
-        self.evaluation_results = {
-            "silhouette_score": silhouette_score(self.data, labels),
-            "davies_bouldin_score": davies_bouldin_score(self.data, labels),
-            "n_clusters": n_clusters}
+        else:
+            self.evaluation_results = {
+                "silhouette_score": silhouette_score(self.data, labels),
+                "davies_bouldin_score": davies_bouldin_score(self.data, labels),
+                "n_clusters": n_clusters}
         

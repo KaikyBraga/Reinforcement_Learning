@@ -5,14 +5,14 @@ class System:
     def __init__(self, coder, reviewer):
         self.coder = coder
         self.reviewer = reviewer
-        self.actions = ["Change_Model", "Fix_Parameters", "Normalize_Data", "Reset_Data"] #, "Remove_Outliers"
+        self.actions = ["Change_Model", "Fix_Parameters", "Normalize_Data", "Reset_Data"] 
         self.q_values_coder = {action: 0 for action in self.actions}
         self.labels = None
         self.results = []
         self.results_flag = []
 
 
-    def train(self, epochs, epsilon, epsilon_min, decay_rate, size_penalty, lambda_k, lambda_size):
+    def train(self, epochs, epsilon, epsilon_min, decay_rate, size_penalty, lambda_silhouette, lambda_davies, lambda_k, lambda_size, t_min):
         self.coder.fit_model()
         previous_labels = self.coder.get_labels()
         previous_silhouette = self.coder.evaluation_results["silhouette_score"]
@@ -48,16 +48,15 @@ class System:
             elif action == "Reset_Data":
                 self.coder.reset_data()
              
-
             new_labels = self.coder.get_labels()
 
-            reward = calculate_reward(self.coder.data, previous_labels, new_labels, lambda_k, lambda_size, t_min=5)
+            reward = calculate_reward(self.coder.data, previous_labels, new_labels, lambda_silhouette, lambda_davies, lambda_k, lambda_size, t_min)
 
             new_silhouette = self.coder.evaluation_results["silhouette_score"]
             new_davies_bouldin = self.coder.evaluation_results["davies_bouldin_score"]
             new_k = self.coder.evaluation_results["n_clusters"]
 
-            self.reviewer.evaluate_reward(reward, new_silhouette, previous_silhouette, new_davies_bouldin, previous_davies_bouldin, new_k, size_penalty, lambda_k, lambda_size)
+            self.reviewer.evaluate_reward(reward, new_silhouette, previous_silhouette, new_davies_bouldin, previous_davies_bouldin, new_k, size_penalty, lambda_k, lambda_size, lambda_silhouette, lambda_davies)
             self.reviewer.evaluate_delirious()
             self.reviewer.evaluate_parameters()
             self.reviewer.evaluate_n_clusters()
@@ -87,6 +86,24 @@ class System:
         print("Training completed.")
 
         return self.results, self.results_flag
+    
+    
+    def plot_action_frequency(self):
+        action_count = {"Change_Model": 0, "Fix_Parameters": 0, "Normalize_Data": 0, "Reset_Data": 0}
+
+        for result in self.results:
+            action = result[2]  
+            action_count[action] += 1
+
+        actions = list(action_count.keys())
+        frequencies = list(action_count.values())
+
+        plt.figure(figsize=(8, 6))
+        plt.bar(actions, frequencies, color=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"])
+        plt.title("Frequência das Ações ao Longo do Treinamento")
+        plt.xlabel("Ações")
+        plt.ylabel("Frequência")
+        plt.show()
 
 
     def plot_rewards(self):
@@ -99,24 +116,6 @@ class System:
         plt.ylabel("Recompensa")
         plt.grid(True)
         plt.legend()
-        plt.show()
-
-
-    def plot_action_frequency(self):
-        action_count = {"Change_Model": 0, "Fix_Parameters": 0, "Normalize_Data": 0, "Reset_Data": 0}
-
-        for result in self.results:
-            action = result[2]  
-            action_count[action] += 1
-
-        actions = list(action_count.keys())
-        frequencies = list(action_count.values())
-
-        plt.figure(figsize=(8, 6))
-        plt.bar(actions, frequencies, color=["#1f77b4", "#ff7f0e"])
-        plt.title("Frequência das Ações ao Longo do Treinamento")
-        plt.xlabel("Ações")
-        plt.ylabel("Frequência")
         plt.show()
 
 
@@ -144,20 +143,23 @@ class System:
 
 
     def plot_average_reward_per_action(self):
-        rewards_by_action = {"Change": [], "Fix": []}
+        rewards_by_action = {"Change_Model": [], "Fix_Parameters": [], "Normalize_Data": [], "Reset_Data": []}
 
+        # Collect rewards for each action
         for result in self.results:
-            action = result[2]  
-            reward = result[1]
+            action = result[2]  # Action taken
+            reward = result[1]  # Reward received
             rewards_by_action[action].append(reward)
 
-        average_rewards = {action: sum(rewards) / len(rewards) for action, rewards in rewards_by_action.items()}
+        # Calculate average rewards for each action
+        average_rewards = {action: (sum(rewards) / len(rewards) if rewards else 0) for action, rewards in rewards_by_action.items()}
 
         actions = list(average_rewards.keys())
         avg_rewards = list(average_rewards.values())
 
+        # Plot the bar chart
         plt.figure(figsize=(8, 6))
-        plt.bar(actions, avg_rewards, color=["#1f77b4", "#ff7f0e"])
+        plt.bar(actions, avg_rewards, color=["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"])  
         plt.title("Recompensa Média por Ação")
         plt.xlabel("Ação")
         plt.ylabel("Recompensa Média")
