@@ -28,7 +28,7 @@ class System:
             print("Action:", action)
 
             if action == previous_action:
-                if previous_action == "Reset_Data" or previous_action == "Normaliza_Data":
+                if previous_action == "Reset_Data" or previous_action == "Normalize_Data":
                     continue 
             elif previous_action == "init":
                 if action == "Reset_Data":
