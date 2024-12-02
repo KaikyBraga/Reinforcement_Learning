@@ -6,3 +6,6 @@ Este projeto tem como objetivo explorar a utilização de Modelos de Linguagem d
 ## Integrantes do Projeto
 - [Guilherme Castilho](https://github.com/GuilhermeCastilho02)
 - [Kaiky Braga](https://github.com/kaikybraga)
+
+## Apresentação:
+- [Canva RL](https://www.canva.com/design/DAGXg5Go2mA/A9XdCh9EGt5Uk7ZazsjNJg/edit?utm_content=DAGXg5Go2mA&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
